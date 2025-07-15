@@ -545,6 +545,167 @@ export const generateColorSuggestions = (palette) => {
   return suggestions;
 };
 
+// --- Theory-Compliant, Accessibility-Driven Fixer for ColorAnalysis ---
+export const generateColorAnalysisFix = (palette) => {
+  let workingPalette = { ...palette };
+  let prevPalette;
+  let maxTries = 8;
+  let allFixes = [];
+  let fixed = false;
+  let lastFailures = Infinity;
+  let attemptedPairs = new Set();
+  const minColorDistance = 15; // minimum delta E or lightness difference for role distinction
+  const forbiddenColors = ["#ffffff", "#000000"];
+  function isRoleDistinctionValid(pal) {
+    // Ensure no two roles are visually indistinguishable
+    const roles = Object.keys(pal);
+    for (let i = 0; i < roles.length; i++) {
+      for (let j = i + 1; j < roles.length; j++) {
+        if (pal[roles[i]] && pal[roles[j]]) {
+          const hslA = hexToHsl(pal[roles[i]]);
+          const hslB = hexToHsl(pal[roles[j]]);
+          // Check lightness and hue difference
+          if (Math.abs(hslA.l - hslB.l) < minColorDistance && Math.abs(hslA.h - hslB.h) < 10 && Math.abs(hslA.s - hslB.s) < 10) {
+            return false;
+          }
+        }
+      }
+    }
+    // Prevent more than one role from being pure white/black
+    let whiteCount = roles.filter(r => pal[r] && pal[r].toLowerCase() === "#ffffff").length;
+    let blackCount = roles.filter(r => pal[r] && pal[r].toLowerCase() === "#000000").length;
+    if (whiteCount > 1 || blackCount > 1) return false;
+    return true;
+  }
+  // Only one round, single rational fix
+  prevPalette = { ...workingPalette };
+  const pairs = [];
+  const textRoles = ['text', 'textSecondary'];
+  const bgRoles = ['background', 'surface', 'primary', 'secondary', 'accent', 'success', 'warning', 'error'];
+  textRoles.forEach(textRole => {
+    bgRoles.forEach(bgRole => {
+      if (workingPalette[textRole] && workingPalette[bgRole] && workingPalette[textRole] !== workingPalette[bgRole]) {
+        const ratio = calculateContrast(workingPalette[textRole], workingPalette[bgRole]);
+        pairs.push({
+          textRole,
+          bgRole,
+          textColor: workingPalette[textRole],
+          bgColor: workingPalette[bgRole],
+          ratio
+        });
+      }
+    });
+  });
+  // Find all failing pairs
+  const failing = pairs.filter(p => p.ratio < 4.5 && !attemptedPairs.has(`${p.textRole}|${p.bgRole}`));
+  let bestFix = null;
+  let bestPalette = null;
+  let bestFailCount = failing.length;
+  for (let pair of failing) {
+    const { textRole, bgRole, textColor, bgColor, ratio } = pair;
+    attemptedPairs.add(`${textRole}|${bgRole}`);
+    // Try black/white for text ONLY if not already used for another role
+    forbiddenColors.forEach(candidate => {
+      if (workingPalette[textRole] !== candidate && Object.values(workingPalette).filter(c => c === candidate).length === 0) {
+        let testPalette = { ...workingPalette, [textRole]: candidate };
+        if (!isRoleDistinctionValid(testPalette)) return;
+        let failCount = 0;
+        textRoles.forEach(tr => {
+          bgRoles.forEach(br => {
+            if (testPalette[tr] && testPalette[br] && testPalette[tr] !== testPalette[br]) {
+              const r = calculateContrast(testPalette[tr], testPalette[br]);
+              if (r < 4.5) failCount++;
+            }
+          });
+        });
+        if (failCount < bestFailCount) {
+          bestFailCount = failCount;
+          bestFix = {
+            problem: `${textColor} on ${bgColor} has ratio ${ratio.toFixed(2)}`,
+            solution: `Change ${textRole} to ${candidate} for contrast ratio ${calculateContrast(candidate, bgColor).toFixed(2)}`,
+            role: textRole,
+            color: candidate
+          };
+          bestPalette = { ...testPalette };
+        }
+      }
+    });
+    // Try lightening/darkening text, but keep role distinction and avoid extremes
+    let hsl = hexToHsl(textColor);
+    for (let i = 1; i <= 8; i++) {
+      let l = hsl.l < 50 ? hsl.l + i * 7 : hsl.l - i * 7;
+      if (l > 95) l = 95;
+      if (l < 5) l = 5;
+      let newHex = hslToHex(hsl.h, hsl.s, l);
+      let testPalette = { ...workingPalette, [textRole]: newHex };
+      if (!isRoleDistinctionValid(testPalette)) continue;
+      let failCount = 0;
+      textRoles.forEach(tr => {
+        bgRoles.forEach(br => {
+          if (testPalette[tr] && testPalette[br] && testPalette[tr] !== testPalette[br]) {
+            const r = calculateContrast(testPalette[tr], testPalette[br]);
+            if (r < 4.5) failCount++;
+          }
+        });
+      });
+      if (failCount < bestFailCount) {
+        bestFailCount = failCount;
+        bestFix = {
+          problem: `${textColor} on ${bgColor} has ratio ${ratio.toFixed(2)}`,
+          solution: `Change ${textRole} to ${newHex} for improved contrast` ,
+          role: textRole,
+          color: newHex
+        };
+        bestPalette = { ...testPalette };
+      }
+    }
+    // Try lightening/darkening background, but keep role distinction and avoid extremes
+    let hslBg = hexToHsl(bgColor);
+    for (let i = 1; i <= 8; i++) {
+      let l = hslBg.l < 50 ? hslBg.l + i * 7 : hslBg.l - i * 7;
+      if (l > 95) l = 95;
+      if (l < 5) l = 5;
+      let newHex = hslToHex(hslBg.h, hslBg.s, l);
+      let testPalette = { ...workingPalette, [bgRole]: newHex };
+      if (!isRoleDistinctionValid(testPalette)) continue;
+      let failCount = 0;
+      textRoles.forEach(tr => {
+        bgRoles.forEach(br => {
+          if (testPalette[tr] && testPalette[br] && testPalette[tr] !== testPalette[br]) {
+            const r = calculateContrast(testPalette[tr], testPalette[br]);
+            if (r < 4.5) failCount++;
+          }
+        });
+      });
+      if (failCount < bestFailCount) {
+        bestFailCount = failCount;
+        bestFix = {
+          problem: `${textColor} on ${bgColor} has ratio ${ratio.toFixed(2)}`,
+          solution: `Change ${bgRole} to ${newHex} for improved contrast`,
+          role: bgRole,
+          color: newHex
+        };
+        bestPalette = { ...testPalette };
+      }
+    }
+  }
+  if (bestFix && bestFailCount < failing.length) {
+    allFixes.push(bestFix);
+    workingPalette = { ...bestPalette };
+    return { fixes: allFixes, palette: workingPalette };
+  }
+  // If no valid fix, report all remaining failing pairs with explanations
+  if (failing.length > 0) {
+    const issues = failing.map(pair => ({
+      problem: `${pair.textColor} on ${pair.bgColor} has ratio ${pair.ratio.toFixed(2)}`,
+      solution: `No valid theory-compliant fix possible for ${pair.textRole} on ${pair.bgRole}. Try adjusting palette roles manually.`
+    }));
+    return { fixes: issues, palette: workingPalette };
+  }
+  return { fixes: [], palette: workingPalette };
+}
+
+// Color harmony analysis
 const findContrastIssues = (palette) => {
   const issues = [];
   const textColors = [palette.text, palette.textSecondary];
@@ -570,7 +731,7 @@ const findContrastIssues = (palette) => {
   return issues;
 };
 
-const calculateContrast = (color1, color2) => {
+export const calculateContrast = (color1, color2) => {
   const l1 = calculateLuminance(color1);
   const l2 = calculateLuminance(color2);
   const brightest = Math.max(l1, l2);

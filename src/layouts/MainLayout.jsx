@@ -6,6 +6,7 @@ import { ColorPaletteInput } from '../components/ColorPaletteInput';
 import { ColorAnalysis } from '../components/ColorAnalysis';
 import { ComponentShowcase } from '../components/ComponentShowcase';
 import { LayoutShowcase } from '../components/LayoutShowcase';
+import { useNavigate } from 'react-router-dom';
 
 const Navigation = ({ 
   activeSection, 
@@ -17,6 +18,7 @@ const Navigation = ({
   isDesktopSidebarCollapsed,
   setDesktopSidebarCollapsed
 }) => {
+  const navigate = useNavigate();
   const navItems = [
     { id: 'palette', label: 'Color Palette', icon: Palette },
     { id: 'analysis', label: 'Analysis', icon: BarChart3 },

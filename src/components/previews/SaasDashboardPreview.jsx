@@ -3,6 +3,7 @@ import { TrendingUp, Download, Plus } from 'lucide-react';
 import { Card, Button, Badge, ProgressBar } from '../ui';
 
 export default function SaasDashboardPreview({ palette, device = 'desktop' }) {
+  const colors = palette || {};
   // Sophisticated SaaS dashboard UI
   const metrics = [
     { id: 'revenue', label: 'Revenue', value: '$24,563', change: '+12.5%', trend: 'up', color: 'primary' },
@@ -14,8 +15,8 @@ export default function SaasDashboardPreview({ palette, device = 'desktop' }) {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-dynamic-text">Analytics Dashboard</h1>
-          <p className="text-dynamic-text-secondary text-sm md:text-base">Track your business performance</p>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: colors.text || 'var(--color-text)' }}>Analytics Dashboard</h1>
+          <p className="text-dynamic-text-secondary text-sm md:text-base" style={{ color: colors.textSecondary || 'var(--color-text-secondary)' }}>Track your business performance</p>
         </div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full md:w-auto">
           <Button variant="outline" size="sm" className="w-full md:w-auto">
@@ -65,7 +66,7 @@ export default function SaasDashboardPreview({ palette, device = 'desktop' }) {
         <div className="flex items-end space-x-2 h-32">
           {[45, 52, 48, 61, 55, 67].map((value, idx, arr) => (
             <div key={idx} className="flex-1 flex flex-col items-center space-y-2">
-              <div className="w-full bg-gradient-to-t from-dynamic-primary to-dynamic-secondary rounded-t-md min-h-[4px]" style={{height: `${(value / Math.max(...arr)) * 100}%`}} />
+              <div className="w-full bg-gradient-to-t" style={{ background: `linear-gradient(to top, ${colors.primary || 'var(--color-primary)'}, ${colors.secondary || 'var(--color-secondary)'})` }} />
               <span className="text-xs text-dynamic-text-secondary">{['Jan','Feb','Mar','Apr','May','Jun'][idx]}</span>
             </div>
           ))}
@@ -102,7 +103,8 @@ export default function SaasDashboardPreview({ palette, device = 'desktop' }) {
                 <img
                   src={activity.avatar}
                   alt={activity.user}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-dynamic-primary shadow"
+                  className="w-10 h-10 rounded-full object-cover border-2"
+                  style={{ borderColor: colors.primary || 'var(--color-primary)' }}
                   loading="lazy"
                 />
                 <div className="flex-1">
@@ -119,8 +121,8 @@ export default function SaasDashboardPreview({ palette, device = 'desktop' }) {
             {[{name:'Design Team',progress:87,color:'primary'},{name:'Development',progress:92,color:'success'},{name:'Marketing',progress:76,color:'warning'}].map((team, idx) => (
               <div key={idx} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-dynamic-text">{team.name}</span>
-                  <span className="text-sm text-dynamic-text-secondary">{team.progress}%</span>
+                  <span className="text-sm font-medium" style={{ color: colors.text || 'var(--color-text)' }}>{team.name}</span>
+                  <span className="text-sm" style={{ color: colors.textSecondary || 'var(--color-text-secondary)' }}>{team.progress}%</span>
                 </div>
                 <ProgressBar value={team.progress} color={team.color} />
               </div>

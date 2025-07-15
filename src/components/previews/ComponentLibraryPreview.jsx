@@ -3,6 +3,8 @@ import { Button, Card, Badge, ProgressBar, Alert, Input } from '../ui';
 import { Mail, Search, Check, AlertCircle, X, Info } from 'lucide-react';
 
 export default function ComponentLibraryPreview({ palette, device = 'desktop' }) {
+  const colors = palette || {};
+
   return (
     <div className="space-y-8">
       <div>

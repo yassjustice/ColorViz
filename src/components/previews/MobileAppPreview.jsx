@@ -3,6 +3,7 @@ import { Home, Search, Camera, User, Palette, Heart, Share, Settings } from 'luc
 import { Button, Badge, Card } from '../ui';
 
 export default function MobileAppPreview({ palette, device = 'desktop' }) {
+  const colors = palette || {};
   const [currentScreen, setCurrentScreen] = useState('home');
   const screens = {
     home: {
@@ -13,18 +14,19 @@ export default function MobileAppPreview({ palette, device = 'desktop' }) {
             <img
               src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80"
               alt="Color Harmony Hero"
-              className="mx-auto mb-4 w-24 h-24 rounded-2xl object-cover shadow-lg border-4 border-dynamic-primary"
+              className="mx-auto mb-4 w-24 h-24 rounded-2xl object-cover shadow-lg border-4"
+              style={{ borderColor: colors.primary || 'var(--color-primary)' }}
               loading="lazy"
             />
-            <h2 className="text-xl font-bold text-dynamic-text mb-2">Color Harmony</h2>
-            <p className="text-dynamic-text-secondary">Discover perfect color combinations</p>
+            <h2 className="text-xl font-bold" style={{ color: colors.text || 'var(--color-text)' }}>Color Harmony</h2>
+            <p style={{ color: colors.textSecondary || 'var(--color-text-secondary)' }}>Discover perfect color combinations</p>
           </div>
           <div className="space-y-3">
-            <Button variant="primary" className="w-full" size="lg">
+            <Button variant="primary" className="w-full" size="lg" style={{ background: colors.primary || 'var(--color-primary)', color: colors.text || 'white' }}>
               <Palette className="w-5 h-5" />
               Create New Palette
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" style={{ borderColor: colors.primary || 'var(--color-primary)', color: colors.primary || 'var(--color-primary)' }}>
               <Camera className="w-5 h-5" />
               Extract from Photo
             </Button>
@@ -60,11 +62,12 @@ export default function MobileAppPreview({ palette, device = 'desktop' }) {
             <img
               src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&w=96&h=96&facepad=2"
               alt="Jane Designer"
-              className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-4 border-dynamic-primary shadow"
+              className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-4"
+              style={{ borderColor: colors.primary || 'var(--color-primary)' }}
               loading="lazy"
             />
-            <h2 className="text-xl font-bold text-dynamic-text">Jane Designer</h2>
-            <p className="text-dynamic-text-secondary">UI/UX Designer</p>
+            <h2 className="text-xl font-bold" style={{ color: colors.text || 'var(--color-text)' }}>Jane Designer</h2>
+            <p style={{ color: colors.textSecondary || 'var(--color-text-secondary)' }}>UI/UX Designer</p>
           </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-dynamic-surface rounded-lg">

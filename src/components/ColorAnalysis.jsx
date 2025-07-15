@@ -23,7 +23,8 @@ import {
   simulateColorBlindness,
   generateColorSuggestions,
   hexToHsl,
-  calculateLuminance
+  calculateLuminance,
+  generateColorAnalysisFix // <-- import the new fix generator
 } from '../utils/colorTheory';
 import { createDualModePalette } from '../utils';
 import { Button } from './ui';
@@ -308,11 +309,21 @@ const PsychologyAnalysis = ({ colors }) => {
 
 const PaletteFixSuggestions = ({ colors, onApplySuggestion }) => {
   // Only show actionable suggestions for contrast/accessibility
-  const suggestions = useMemo(() => {
-    const all = generateColorSuggestions(colors);
-    // Only keep contrast suggestions with actionable fixes
-    return all.filter(s => s.type === 'contrast' && s.fixes && s.fixes.length > 0);
-  }, [colors]);
+  // Use the new theory-compliant fix generator for ColorAnalysis only
+  const analysisResult = useMemo(() => generateColorAnalysisFix(colors), [colors]);
+  const hasFixes = analysisResult.fixes && analysisResult.fixes.length > 0;
+  const hasActionableFix = analysisResult.fixes.some(fix => fix.role && fix.color);
+  const suggestions = hasFixes
+    ? [{
+        type: 'contrast',
+        severity: hasActionableFix ? 'high' : 'medium',
+        title: hasActionableFix ? 'Contrast Issues Detected' : 'Unfixable Contrast Issues',
+        description: hasActionableFix
+          ? 'Palette can be improved for accessibility.'
+          : 'Some color combinations cannot be fixed automatically. See details below.',
+        fixes: analysisResult.fixes
+      }]
+    : [];
 
   const getSeverityIcon = (severity) => {
     switch (severity) {
@@ -335,50 +346,104 @@ const PaletteFixSuggestions = ({ colors, onApplySuggestion }) => {
     );
   }
 
+  // Only allow a single rational fix per click
+  const [canFix, setCanFix] = React.useState(false);
+  const [bestImprovingFix, setBestImprovingFix] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!hasActionableFix) {
+      setCanFix(false);
+      setBestImprovingFix(null);
+      return;
+    }
+    // Find a fix that actually reduces the number of failing pairs
+    let initialFailCount = suggestions.reduce((acc, s) => acc + (s.fixes ? s.fixes.length : 0), 0);
+    let found = null;
+    for (const suggestion of suggestions) {
+      if (suggestion.type === 'contrast') {
+        for (const fix of suggestion.fixes) {
+          if (fix.role && fix.color) {
+            const newColors = { ...colors, [fix.role]: fix.color };
+            const newAnalysis = generateColorAnalysisFix(newColors);
+            const newFailCount = newAnalysis.fixes ? newAnalysis.fixes.length : 0;
+            if (newFailCount < initialFailCount) {
+              found = { suggestion, fix };
+              break;
+            }
+          }
+        }
+      }
+      if (found) break;
+    }
+    if (found) {
+      setCanFix(true);
+      setBestImprovingFix(found);
+    } else {
+      setCanFix(false);
+      setBestImprovingFix(null);
+    }
+  }, [JSON.stringify(colors), hasActionableFix]);
+
+  const handleSingleBestFix = () => {
+    if (canFix && bestImprovingFix && onApplySuggestion) {
+      onApplySuggestion({ ...bestImprovingFix.suggestion, fixes: [bestImprovingFix.fix] });
+    }
+  };
   return (
     <div className="space-y-4">
-      {suggestions.map((suggestion, index) => (
+      {suggestions.length > 0 && (
         <motion.div
-          key={index}
           className="p-4 bg-dynamic-surface rounded-lg border border-dynamic-border"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.1 }}
         >
           <div className="flex items-start gap-3 mb-3">
-            {getSeverityIcon(suggestion.severity)}
+            {getSeverityIcon(suggestions[0].severity)}
             <div className="flex-1">
               <h4 className="font-semibold text-dynamic-text mb-1">
-                {suggestion.title}
+                {suggestions[0].title}
               </h4>
               <p className="text-sm text-dynamic-text-secondary mb-3">
-                {suggestion.description}
+                {suggestions[0].description}
               </p>
             </div>
           </div>
           <div className="space-y-2">
-            {suggestion.fixes.map((fix, fixIndex) => (
+            {suggestions[0].fixes.map((fix, fixIndex) => (
               <div key={fixIndex} className="flex items-start gap-2 text-sm">
                 <div className="w-1 h-1 rounded-full bg-dynamic-text-secondary mt-2 flex-shrink-0" />
                 <div className="text-dynamic-text-secondary">
                   {typeof fix === 'string' ? fix : fix.problem || fix.solution}
+                  {fix.solution && !fix.role && (
+                    <span className="block text-xs text-red-500 mt-1">{fix.solution}</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-          {suggestion.type === 'contrast' && (
+          {hasActionableFix && (
             <Button
               variant="primary"
               size="sm"
               className="mt-3 flex items-center gap-2"
-              onClick={() => onApplySuggestion && onApplySuggestion(suggestion)}
+              onClick={handleSingleBestFix}
+              disabled={!canFix}
             >
               <RefreshCw className="w-3 h-3" />
-              Apply Palette Fix
+              {canFix ? 'Apply Palette Fix' : 'No Further Fixes'}
             </Button>
           )}
         </motion.div>
-      ))}
+      )}
+      {suggestions.length === 0 && (
+        <div className="p-8 text-center bg-dynamic-surface rounded-lg border border-dynamic-border">
+          <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+          <h3 className="font-semibold text-dynamic-text mb-2">No Contrast Issues Detected</h3>
+          <p className="text-dynamic-text-secondary">
+            All color combinations pass accessibility standards.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

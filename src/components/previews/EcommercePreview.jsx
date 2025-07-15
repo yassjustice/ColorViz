@@ -3,10 +3,17 @@ import { ShoppingCart, Star, Heart, Share } from 'lucide-react';
 import { Card, Button, Badge } from '../ui';
 
 export default function EcommercePreview({ palette, device = 'desktop' }) {
+  const colors = palette || {};
   // Sophisticated, real-world e-commerce UI
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-r from-dynamic-primary to-dynamic-secondary text-white rounded-xl p-4 md:p-8 shadow-lg">
+      <div className="bg-gradient-to-r" style={{
+        background: `linear-gradient(to right, ${colors.primary || 'var(--color-primary)'}, ${colors.secondary || 'var(--color-secondary)'})`,
+        color: colors.text || 'white',
+        padding: '1rem',
+        borderRadius: '0.5rem',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      }}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-2">TechStore</h2>
@@ -77,10 +84,7 @@ export default function EcommercePreview({ palette, device = 'desktop' }) {
                 <img
                   src={product.image}
                   alt={product.name}
-                  className={`rounded-xl border-2 border-dynamic-primary shadow bg-white ${
-                    device === 'mobile' ? 'w-36 h-36' : device === 'tablet' ? 'w-48 h-48' : 'w-56 h-56 md:w-64 md:h-64'
-                  } object-cover`}
-                  style={{ aspectRatio: '1 / 1', objectFit: 'cover' }}
+                  className={`rounded-xl border-2`} style={{ borderColor: colors.primary || 'var(--color-primary)' , aspectRatio: '1 / 1', objectFit: 'cover' }}
                   loading="lazy"
                 />
               </div>
@@ -92,7 +96,7 @@ export default function EcommercePreview({ palette, device = 'desktop' }) {
                 <Badge variant="success">-{Math.round((1 - product.price / product.originalPrice) * 100)}%</Badge>
               )}
             </div>
-            <h3 className={`font-semibold text-dynamic-text mb-2 line-clamp-2 ${device === 'mobile' ? 'text-xs' : device === 'tablet' ? 'text-sm' : 'text-sm sm:text-base md:text-lg'}`}>{product.name}</h3>
+            <h3 className={`font-semibold mb-2 line-clamp-2`} style={{ color: colors.text || 'var(--color-text)' }}>{product.name}</h3>
             <div className={`flex items-center ${device === 'mobile' ? 'gap-0.5' : 'gap-1 sm:gap-2'} mb-2 sm:mb-3`}>
               <div className="flex text-yellow-400">
                 {[...Array(5)].map((_, i) => (
@@ -103,9 +107,9 @@ export default function EcommercePreview({ palette, device = 'desktop' }) {
             </div>
             <div className="mb-3">
               <div className={`flex items-center ${device === 'mobile' ? 'gap-0.5' : 'gap-1 sm:gap-2'}`}> 
-                <span className="text-xl md:text-2xl font-bold text-dynamic-primary">${product.price}</span>
+                <span className="text-xl md:text-2xl font-bold" style={{ color: colors.primary || 'var(--color-primary)' }}>${product.price}</span>
                 {product.originalPrice && (
-                  <span className="text-base md:text-lg line-through text-dynamic-text-secondary">${product.originalPrice}</span>
+                  <span className="text-base md:text-lg line-through" style={{ color: colors.textSecondary || 'var(--color-text-secondary)' }}>${product.originalPrice}</span>
                 )}
               </div>
             </div>
